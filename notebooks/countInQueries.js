@@ -1,4 +1,5 @@
 const eachFileInDir = require('./eachFileInDir')
+const Query = require('./Query')
 
 module.exports = (dir, counterCallback) =>  {
   let occurences = 0
@@ -6,7 +7,7 @@ module.exports = (dir, counterCallback) =>  {
 
   eachFileInDir(dir, (rawQuery, resolve) => {
     const parsedQuery = parser.parse(rawQuery)
-    occurences += counterCallback(parsedQuery, rawQuery) ? 1 : 0
+    occurences += counterCallback(new Query(rawQuery, parsedQuery)) ? 1 : 0
     total++
 
     resolve()

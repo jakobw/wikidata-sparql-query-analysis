@@ -10,3 +10,5 @@ USER $NB_USER
 RUN npm install -g ijavascript
 RUN echo '{}' > package.json
 RUN npm install sparqljs
+RUN npm install lodash
+RUN npm install traverse
