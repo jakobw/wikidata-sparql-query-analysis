@@ -1,24 +1,28 @@
 const fs = require('fs')
 const sparqljs = require('sparqljs')
+const levenshtein = require('js-levenshtein')
 const prefixes = require('../notebooks/namespaces')
 
-const queriesDir = __dirname + '/all'
+const LEVENSHTEIN_THRESHOLD = 5
+
+const queriesSourceDir = __dirname + '/all'
+const queriesTargetDir = __dirname + '/normalized'
 
 new Promise((resolve, reject) => {
-    fs.readdir(queriesDir, (err, files) => {
+    fs.readdir(queriesSourceDir, (err, files) => {
         resolve(files)
     })
 }).then((files) => {
     return Promise.all(files.map((file) => {
         return new Promise((resolve, reject) => {
-            fs.readFile(queriesDir + '/' + file, 'utf8', (err, fileContent) => {
+            fs.readFile(queriesSourceDir + '/' + file, 'utf8', (err, fileContent) => {
                 resolve(fileContent)
             })
         })
     }))
 }).then((fileContents) => {
     console.log(fileContents.length)
-    const queries = fileContents.map((query) => {
+    let queries = fileContents.map((query) => {
         try {
             const parsedQuery = (new sparqljs.Parser({ prefixes })).parse(query)
             return (new sparqljs.Generator()).stringify(parsedQuery)
@@ -27,28 +31,27 @@ new Promise((resolve, reject) => {
         }
     }).filter(id => id)
     .map((query) => {
-        // replace Q-ids
-        // replace P-ids
+        return query.replace(/\:P\d+/g, ':P777')
+            .replace(/\:Q\d+/g, ':Q666')
     })
-    console.log(queries.length)
-    console.log(queries[0], queries[1], queries[2])
+
+    let clusterCount = 0
+    while (queries.length > 0) {
+        console.log(queries.length)
+        const leftovers = []
+        const baseQuery = queries.pop()
+        let queriesClustered = 0
+        queries.forEach((query, i) => {
+            if (levenshtein(baseQuery, query) <= LEVENSHTEIN_THRESHOLD) {
+                fs.writeFile(queriesTargetDir + `/${clusterCount}_${queriesClustered}.txt`, query, (err) => {
+                    if (err) console.log('sad')
+                })
+                queriesClustered++
+            } else {
+                leftovers.push(query)
+            }
+        })
+        clusterCount++
+        queries = leftovers
+    }
 })
-        
-
-// Step 1: create directories for each cluster
-// for each file in dir
-    // read to string
-    // sparql parse and stringify (idea: get only actual queries, also whitespace and whatnot)
-    // replace item ids with Q666
-    // replace property ids with P777
-
-// for each query
-    // take first query
-    // create dir
-    // for each query calculate edit distance
-    // if edit distance <= threshold
-        // move (! because we don't want the same query in multiple clusters) query into dir
-
-// Step 2: get 1 representative of each cluster
-// for each dir
-    // take 1 query and copy it into some folder

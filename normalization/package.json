@@ -1,5 +1,6 @@
 {
-  "devDependencies": {
+  "dependencies": {
+    "js-levenshtein": "^1.1.6",
     "sparqljs": "^3.0.1"
   }
 }
