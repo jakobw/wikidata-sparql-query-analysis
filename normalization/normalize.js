@@ -13,13 +13,9 @@ new Promise((resolve, reject) => {
         resolve(files)
     })
 }).then((files) => {
-    return Promise.all(files.map((file) => {
-        return new Promise((resolve, reject) => {
-            fs.readFile(queriesSourceDir + '/' + file, 'utf8', (err, fileContent) => {
-                resolve(fileContent)
-            })
-        })
-    }))
+    return files.map((file) => {
+        return fs.readFileSync(queriesSourceDir + '/' + file, 'utf8')
+    })
 }).then((fileContents) => {
     console.log(fileContents.length)
     let queries = fileContents.map((query) => {
@@ -34,6 +30,7 @@ new Promise((resolve, reject) => {
         return query.replace(/\:P\d+/g, ':P777')
             .replace(/\:Q\d+/g, ':Q666')
     })
+    console.log(`${queries.length} valid queries to cluster`)
 
     let clusterCount = 0
     while (queries.length > 0) {
