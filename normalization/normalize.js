@@ -40,6 +40,9 @@ new Promise((resolve, reject) => {
         console.log(queries.length)
         const leftovers = []
         const baseQuery = queries.pop()
+        fs.writeFile(queriesTargetDir + `/${clusterCount}_base.txt`, baseQuery, (err) => {
+            if (err) console.log('sad')
+        })
         let queriesClustered = 0
         queries.forEach((query, i) => {
             if (levenshtein(baseQuery, query) <= LEVENSHTEIN_THRESHOLD) {
