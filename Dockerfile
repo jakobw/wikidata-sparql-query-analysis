@@ -3,9 +3,9 @@ FROM jupyter/minimal-notebook
 USER root
 
 RUN apt-get update \
-    && apt-get install -y nodejs npm ipython ipython-notebook
+    && apt-get install -y nodejs npm
 
-USER $NB_USER
+USER $NB_UID
 
 RUN npm install -g ijavascript
 RUN echo '{}' > package.json
