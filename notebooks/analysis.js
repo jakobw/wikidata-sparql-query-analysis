@@ -1,3 +1,5 @@
+const propertyDataTypeMapping = require('./propertyDataTypeMapping');
+
 function isValidQuery(query) {
     return true // will internally throw an exception when parsed
 }
@@ -57,7 +59,7 @@ function hasPropertyPath(query) {
 // shapes
 function hasPath(query) {
     const objects = query.getObjects()
-    
+
     return query.getSubjects().some((subject) => {
         return typeof subject === 'string' && subject.startsWith('?') && objects.includes(subject)
     })
@@ -73,7 +75,7 @@ function hasSource(query) {
 function transitive(graph) { // silly
     do {
         var change = false
-        
+
         for (var subject in graph) {
             var subjectReachability = graph[subject]
             for (var i = 0; i < graph[subject].length; i++) {
@@ -87,7 +89,7 @@ function transitive(graph) { // silly
             }
         }
     } while (change)
-        
+
     return graph
 }
 
@@ -104,7 +106,7 @@ function hasCycle(query) {
             if (!acc[node.subject]) acc[node.subject] = []
             acc[node.subject].push(node.object)
         }
-        
+
         return acc
     }, {})
 
@@ -137,6 +139,63 @@ function getPropertyPathPredicates(wiki) {
     })
 }
 
+function getPropertiesPerQuery(wiki) {
+    var predicates = []
+
+    return eachFileInDir(wiki, (query, resolve) => {
+        var query = new Query(query, parser.parse(query))
+
+        predicates = predicates.concat(getPredicatePropertyIds(query))
+
+        resolve()
+    }).then(() => {
+        return _.countBy(predicates, _.identity)
+    })
+}
+
+function getPredicatePropertyIds(query) {
+    return traverse(query.getPredicates()).reduce((acc, node) => {
+        if (typeof node === 'string' && node.includes('prop/direct/P')) {
+            acc.push(node.substr(36))
+        }
+
+        return acc
+    }, [])
+}
+
+function getDatatypesPerQuery(wiki) {
+    var dataTypes = []
+
+    return eachFileInDir(wiki, (query, resolve) => {
+        var query = new Query(query, parser.parse(query))
+
+        dataTypes = traverse(query.getPredicates()).reduce((acc, node) => {
+            if (typeof node === 'string' && node.includes('prop/direct/P')) {
+                const propertyId = node.substr(36)
+                if (propertyDataTypeMapping[propertyId]) {
+                    acc.push(propertyDataTypeMapping[propertyId])
+                }
+            }
+
+            return acc
+        }, dataTypes)
+
+        resolve()
+    }).then(() => {
+        return _.countBy(dataTypes, _.identity)
+    })
+}
+
+function canBeBuiltWithDatatypes(types) {
+    return function (query) {
+        const dataTypes = getPredicatePropertyIds(query).map(p => {
+            return propertyDataTypeMapping[p] || p
+        })
+
+        return (new Set([...types, ...dataTypes])).size === types.length // subset test
+    }
+}
+
 // Wikidata features
 function hasQualifiers(query) {
     return query.getRaw().includes('pq:P')
@@ -146,7 +205,7 @@ function hasReferences(query) {
 }
 function hasSitelinks(query) {
     return query.getRaw().includes('schema:about')
-} 
+}
 
 module.exports = {
     isValidQuery,
@@ -168,7 +227,10 @@ module.exports = {
     hasCycle,
     hasURISubject,
     getPropertyPathPredicates,
+    getPropertiesPerQuery,
+    getDatatypesPerQuery,
     hasQualifiers,
     hasReferences,
     hasSitelinks,
+    canBeBuiltWithDatatypes,
 }
